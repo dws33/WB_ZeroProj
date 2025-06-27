@@ -33,6 +33,7 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to write messages:", err)
 	}
+	log.Println("send order!")
 
 }
 
