@@ -2,37 +2,34 @@ package main
 
 import (
 	"context"
-	"github.com/segmentio/kafka-go"
 	"log"
+	"net"
+	"os"
+
+	"github.com/segmentio/kafka-go"
 )
 
 func main() {
 
-	topic := "orders"
-	partition := 0
-
-	ctx := context.Background()
-
-	p, err := kafka.DefaultDialer.LookupPartition(ctx, "tcp", "localhost:9092", topic, partition)
-	if err != nil {
-		log.Fatal("failed to dial leader:", err)
-	}
-	p.Leader.Host = "localhost" // fixme
-
-	c, err := kafka.DefaultDialer.DialPartition(ctx, "tcp", "localhost:9092", p)
-	if err != nil {
-		log.Fatal("failed to dial leader:", err)
+	w := &kafka.Writer{
+		Addr:     kafka.TCP(net.JoinHostPort(os.Getenv("KAFKA_HOST"), os.Getenv("KAFKA_PORT"))),
+		Topic:    os.Getenv("TOPIC_NAME"),
+		Balancer: &kafka.LeastBytes{},
 	}
 
-	_, err = c.WriteMessages(
+	err := w.WriteMessages(context.Background(),
 		kafka.Message{
-			//Key:   []byte("Key-A"),
 			Value: []byte(messageExample),
 		},
 	)
 	if err != nil {
 		log.Fatal("failed to write messages:", err)
 	}
+
+	if err := w.Close(); err != nil {
+		log.Fatal("failed to close writer:", err)
+	}
+
 	log.Println("send order!")
 
 }

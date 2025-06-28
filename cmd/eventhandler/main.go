@@ -9,73 +9,62 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/segmentio/kafka-go"
 	"log"
+	"net"
+	"os"
 )
 
 func main() {
-	topic := "orders"
-	partition := 0
 
 	ctx := context.Background()
 
-	p, err := kafka.DefaultDialer.LookupPartition(ctx, "tcp", "localhost:9092", topic, partition)
-	if err != nil {
-		log.Fatal("failed to dial leader:", err)
-	}
-	p.Leader.Host = "localhost" // fixme
-
-	c, err := kafka.DefaultDialer.DialPartition(ctx, "tcp", "localhost:9092", p)
-	if err != nil {
-		log.Fatal("failed to dial leader:", err)
-	}
-
-	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		"localhost", 5432, "user", "password", "orders_db")
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		os.Getenv("PGHOST"),
+		os.Getenv("PGPORT"),
+		os.Getenv("PGUSER"),
+		os.Getenv("PGPASSWORD"),
+		os.Getenv("PGDATABASE"),
+	)
 
 	pgxPool, err := pgxpool.New(ctx, connStr)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer pgxPool.Close()
-	err = pgxPool.Ping(ctx)
+
+	store, err := storage.New(ctx, pgxPool)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	store := storage.NewStorage(pgxPool)
+	r := kafka.NewReader(kafka.ReaderConfig{
+		Brokers:  []string{net.JoinHostPort(os.Getenv("KAFKA_HOST"), os.Getenv("KAFKA_PORT"))},
+		Topic:    os.Getenv("TOPIC_NAME"),
+		MaxBytes: 10e6, // 10MB
+	})
+	defer r.Close()
 
 	order := new(model.Order)
 	for {
-		m, err := c.ReadMessage(10e6)
+		m, err := r.ReadMessage(ctx)
 		if err != nil {
-			log.Fatal(err)
+			log.Println("fail to read message", err)
+			continue
 		}
 		err = json.Unmarshal(m.Value, order)
 		if err != nil {
-			log.Fatal(err)
+			log.Println("fail to unmarshal order", err)
+			continue
+		}
+		err = order.Validate()
+		if err != nil {
+			log.Println("invalid order", err)
+			continue
 		}
 		err = store.CreateOrder(ctx, &*order)
 		if err != nil {
-			log.Fatal(err)
+			log.Println("fail to save order in db", err)
+			continue
 		}
-		log.Println("handle order")
-
+		log.Println("success handle order")
 	}
-
-	//////////////////
-
-	//r := kafka.NewReader(kafka.ReaderConfig{
-	//	Brokers:   []string{"localhost:9092", "localhost:9093", "localhost:9094"},
-	//	Topic:     "topic-A",
-	//	Partition: 0,
-	//	MaxBytes:  10e6, // 10MB
-	//})
-	//r.SetOffset(42)
-	//
-	//for {
-	//	m, err := r.ReadMessage(context.Background())
-	//	if err != nil {
-	//		break
-	//	}
-	//	fmt.Printf("message at offset %d: %s = %s\n", m.Offset, string(m.Key), string(m.Value))
-	//}
 }

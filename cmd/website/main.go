@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/dws33/WB_ZeroProj/internal/model"
 	"github.com/dws33/WB_ZeroProj/internal/storage"
@@ -9,20 +10,20 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"html/template"
 	"log"
+	"net"
 	"net/http"
+	"os"
 )
 
 func main() {
 
-	//connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-	//	os.Getenv("PGHOST"),
-	//	os.Getenv("PGPORT"),
-	//	os.Getenv("PGUSER"),
-	//	os.Getenv("PGPASSWORD"),
-	//	os.Getenv("PGDATABASE"),
-	//)
-	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		"localhost", 5432, "user", "password", "orders_db")
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		os.Getenv("PGHOST"),
+		os.Getenv("PGPORT"),
+		os.Getenv("PGUSER"),
+		os.Getenv("PGPASSWORD"),
+		os.Getenv("PGDATABASE"),
+	)
 
 	ctx := context.TODO()
 
@@ -31,13 +32,12 @@ func main() {
 		log.Fatal(err)
 	}
 	defer pgxPool.Close()
-	err = pgxPool.Ping(ctx)
+
+	dbStore, err := storage.New(ctx, pgxPool)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	dbStore := storage.NewStorage(pgxPool)
-	cachedStore, err := cache.NewCachedStorage(ctx, dbStore)
+	cachedStore, err := cache.New(ctx, dbStore)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -63,9 +63,14 @@ func main() {
 			log.Println("template execute error:", err)
 		}
 	})
-	err = http.ListenAndServe(":8082", nil)
-	if err != nil {
-		log.Fatal(err)
+
+	addr := net.JoinHostPort(
+		os.Getenv("SERVER_HOST"),
+		os.Getenv("SERVER_PORT"))
+
+	log.Println("HTTP server started on", addr)
+	if err := http.ListenAndServe(addr, nil); err != nil && errors.Is(err, http.ErrServerClosed) {
+		log.Fatalf("server failed: %s", err)
 	}
 }
 

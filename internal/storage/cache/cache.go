@@ -10,9 +10,26 @@ import (
 
 // CachedStorage — потокобезопасный кэш заказов в памяти.
 type CachedStorage struct {
-	mu      sync.RWMutex
-	orders  map[string]*model.Order
+	cache   cache
 	Storage *storage.Storage
+}
+
+type cache struct {
+	mu     *sync.RWMutex
+	orders map[string]*model.Order
+}
+
+func (c *cache) Get(uid string) (*model.Order, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	order, ok := c.orders[uid]
+	return order, ok
+}
+
+func (c *cache) Add(order *model.Order) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.orders[order.OrderUID] = order
 }
 
 func (c *CachedStorage) CreateOrder(ctx context.Context, order *model.Order) error {
@@ -20,16 +37,12 @@ func (c *CachedStorage) CreateOrder(ctx context.Context, order *model.Order) err
 	if err != nil {
 		return err
 	}
-	c.mu.Lock()
-	c.orders[order.OrderUID] = order
-	c.mu.Unlock()
+	c.cache.Add(order)
 	return nil
 }
 
 func (c *CachedStorage) GetOrder(ctx context.Context, uid string) (*model.Order, error) {
-	c.mu.RLock()
-	order, ok := c.orders[uid]
-	c.mu.RUnlock()
+	order, ok := c.cache.Get(uid)
 	if ok {
 		return order, nil
 	}
@@ -38,15 +51,16 @@ func (c *CachedStorage) GetOrder(ctx context.Context, uid string) (*model.Order,
 	if err != nil {
 		return nil, err
 	}
-	c.mu.Lock()
-	c.orders[uid] = order
-	c.mu.Unlock()
+	c.cache.Add(order)
 	return order, nil
 }
 
-func NewCachedStorage(ctx context.Context, store *storage.Storage) (*CachedStorage, error) {
+func New(ctx context.Context, store *storage.Storage) (*CachedStorage, error) {
 	cs := &CachedStorage{
-		orders:  make(map[string]*model.Order),
+		cache: cache{
+			mu:     new(sync.RWMutex),
+			orders: make(map[string]*model.Order),
+		},
 		Storage: store,
 	}
 
@@ -55,7 +69,7 @@ func NewCachedStorage(ctx context.Context, store *storage.Storage) (*CachedStora
 		return nil, err
 	}
 	for i := 0; i < len(orders); i++ {
-		cs.orders[orders[i].OrderUID] = &orders[i]
+		cs.cache.orders[orders[i].OrderUID] = orders[i]
 	}
 	return cs, nil
 }

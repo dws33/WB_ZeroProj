@@ -1,35 +1,11 @@
--- Таблица заказов
-CREATE TABLE IF NOT EXISTS orders (
-                                      order_uid TEXT PRIMARY KEY,
-                                      track_number TEXT NOT NULL,
-                                      entry TEXT,
-                                      locale TEXT,
-                                      internal_signature TEXT,
-                                      customer_id TEXT,
-                                      delivery_service TEXT,
-                                      shardkey TEXT,
-                                      sm_id INT,
-                                      date_created TIMESTAMP,
-                                      oof_shard TEXT
-                                  --                                       data JSONB -- храним исходный JSON заказа для удобства
-);
+DROP TABLE IF EXISTS orders CASCADE;
+DROP TABLE IF EXISTS deliveries CASCADE;
+DROP TABLE IF EXISTS transactions CASCADE;
+DROP TABLE IF EXISTS items CASCADE;
 
--- Таблица доставки
-CREATE TABLE IF NOT EXISTS deliveries (
-    order_uid TEXT PRIMARY KEY REFERENCES orders(order_uid) ON DELETE CASCADE,
-    name TEXT,
-    phone TEXT,
-    zip TEXT,
-    city TEXT,
-    address TEXT,
-    region TEXT,
-    email TEXT
-    );
 
--- Таблица оплаты
-CREATE TABLE IF NOT EXISTS payments (
-    order_uid TEXT PRIMARY KEY REFERENCES orders(order_uid) ON DELETE CASCADE,
-    transaction TEXT,
+CREATE TABLE transactions (
+    transactions_uid TEXT PRIMARY KEY, -- todo in json "transaction"
     request_id TEXT,
     currency TEXT,
     provider TEXT,
@@ -39,12 +15,37 @@ CREATE TABLE IF NOT EXISTS payments (
     delivery_cost INT,
     goods_total INT,
     custom_fee INT
-    );
+);
 
--- Таблица товаров
-CREATE TABLE IF NOT EXISTS items (
-                                     id SERIAL PRIMARY KEY,
-                                     order_uid TEXT REFERENCES orders(order_uid) ON DELETE CASCADE,
+CREATE TABLE orders (
+    order_uid TEXT PRIMARY KEY,
+    track_number TEXT,
+    entry TEXT,
+    locale TEXT,
+    internal_signature TEXT,
+    customer_id TEXT,
+    delivery_service TEXT,
+    shardkey TEXT,
+    sm_id INT,
+    date_created TIMESTAMP,
+    oof_shard TEXT,
+    payment_id TEXT REFERENCES transactions
+);
+
+CREATE TABLE deliveries (
+    order_uid TEXT PRIMARY KEY REFERENCES orders,
+    name TEXT,
+    phone TEXT,
+    zip TEXT,
+    city TEXT,
+    address TEXT,
+    region TEXT,
+    email TEXT
+);
+
+CREATE TABLE items (
+    id SERIAL PRIMARY KEY,
+    order_uid TEXT REFERENCES orders,
     chrt_id INT,
     track_number TEXT,
     price INT,
@@ -56,4 +57,4 @@ CREATE TABLE IF NOT EXISTS items (
     nm_id INT,
     brand TEXT,
     status INT
-    );
+);
