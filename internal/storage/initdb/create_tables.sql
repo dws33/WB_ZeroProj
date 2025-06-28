@@ -1,11 +1,11 @@
-DROP TABLE IF EXISTS orders CASCADE;
-DROP TABLE IF EXISTS deliveries CASCADE;
-DROP TABLE IF EXISTS transactions CASCADE;
-DROP TABLE IF EXISTS items CASCADE;
+-- DROP TABLE IF EXISTS orders CASCADE;
+-- DROP TABLE IF EXISTS deliveries CASCADE;
+-- DROP TABLE IF EXISTS transactions CASCADE;
+-- DROP TABLE IF EXISTS items CASCADE;
 
 
 CREATE TABLE transactions (
-    transactions_uid TEXT PRIMARY KEY, -- todo in json "transaction"
+    transactions_uid TEXT PRIMARY KEY,
     request_id TEXT,
     currency TEXT,
     provider TEXT,

@@ -36,6 +36,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// todo add consumer group
 	r := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:  []string{net.JoinHostPort(os.Getenv("KAFKA_HOST"), os.Getenv("KAFKA_PORT"))},
 		Topic:    os.Getenv("TOPIC_NAME"),

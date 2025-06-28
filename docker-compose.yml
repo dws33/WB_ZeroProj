@@ -27,17 +27,17 @@ services:
       volumes:
         - kafka_data:/var/lib/kafka/data
 
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: kafka-ui
-    ports:
-      - "8080:8080" #todo fix
-    environment:
-      DYNAMIC_CONFIG_ENABLED: 'true'
-      KAFKA_CLUSTERS_0_NAME: "Kafka Cluster"
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka:9092"
-    depends_on:
-      - kafka
+#  kafka-ui:
+#    image: provectuslabs/kafka-ui:latest
+#    container_name: kafka-ui
+#    ports:
+#      - "8080:8080" #todo fix
+#    environment:
+#      DYNAMIC_CONFIG_ENABLED: 'true'
+#      KAFKA_CLUSTERS_0_NAME: "Kafka Cluster"
+#      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka:9092"
+#    depends_on:
+#      - kafka
 
   postgres:
     image: postgres:16
@@ -48,7 +48,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./initdb:/docker-entrypoint-initdb.d
+      - ./internal/storage/initdb:/docker-entrypoint-initdb.d
       - pgdata:/var/lib/postgresql/data
 #
 #  order-service:
