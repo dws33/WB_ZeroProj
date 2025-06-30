@@ -195,6 +195,9 @@ func getAllItems(ctx context.Context, q rowQueryer, orderId string) ([]*model.It
 }
 
 func orderToPtrs(order *model.Order) []any {
+	order.Delivery = new(model.Delivery)
+	order.Payment = new(model.Payment)
+
 	return []any{
 		&order.OrderUID,
 		&order.TrackNumber,
