@@ -43,7 +43,6 @@ func main() {
 	}
 
 	http.HandleFunc("/site/order", func(w http.ResponseWriter, r *http.Request) {
-		tmpl := template.Must(template.New("page").Parse(tpl))
 
 		data := struct {
 			Order *model.Order
@@ -51,11 +50,13 @@ func main() {
 		}{}
 
 		orderUID := r.URL.Query().Get("order_uid")
-		order, err := cachedStore.GetOrder(ctx, orderUID)
-		if err != nil {
-			data.Error = fmt.Sprintf("Заказ с order_uid %q не найден", orderUID)
-		} else {
-			data.Order = order
+		if orderUID != "" {
+			order, err := cachedStore.GetOrder(ctx, orderUID)
+			if err != nil {
+				data.Error = fmt.Sprintf("Заказ с order_uid %q не найден", orderUID)
+			} else {
+				data.Order = order
+			}
 		}
 
 		if err := tmpl.Execute(w, data); err != nil {
@@ -73,6 +74,8 @@ func main() {
 		log.Fatalf("server failed: %s", err)
 	}
 }
+
+var tmpl = template.Must(template.New("page").Parse(tpl))
 
 var tpl = `
 <!DOCTYPE html>
