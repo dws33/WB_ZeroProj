@@ -1,0 +1,61 @@
+# Пути к Go-приложениям
+KAFKAFILLER = /cmd/eventhandler/testhelpers/kafkafiller/main.go
+EVENTHANDLER = /cmd/eventhandler/main.go
+HTTPSERVER = /cmd/httpserver/main.go
+WEBSITE = /cmd/website/main.go
+
+# Docker Compose
+DOCKER_COMPOSE = docker-compose.yml
+
+# Подгружаем переменные окружения из .env
+include .env
+export
+
+# Главная цель
+all: up-zookeeper up-kafka up-postgres run-kafkafiller run-eventhandler run-httpserver run-website
+
+# Запуск Zookeeper и ожидание готовности
+up-zookeeper:
+	@echo "🚀 Запуск Zookeeper..."
+	docker compose -f $(DOCKER_COMPOSE) up -d zookeeper
+	@echo "⏳ Ожидание Zookeeper (порт 2181)..."
+	@until nc -z localhost 2181; do sleep 1; done
+	@echo "✅ Zookeeper готов."
+
+# Запуск Kafka и ожидание готовности
+up-kafka: up-zookeeper
+	@echo "🚀 Запуск Kafka..."
+	docker compose -f $(DOCKER_COMPOSE) up -d kafka
+	@echo "⏳ Ожидание Kafka (порт 9092)..."
+	@until nc -z localhost 9092; do sleep 1; done
+	@echo "✅ Kafka готов."
+
+# Запуск PostgreSQL и ожидание
+up-postgres:
+	@echo "🚀 Запуск PostgreSQL..."
+	docker compose -f $(DOCKER_COMPOSE) up -d postgres
+	@echo "⏳ Ожидание PostgreSQL..."
+	@until docker compose logs postgres | grep "database system is ready to accept connections"; do sleep 1; done
+	@echo "✅ PostgreSQL готов."
+
+# Запуск приложений Go
+run-kafkafiller:
+	@echo "▶️ Запуск kafkafiller..."
+	go run $(KAFKAFILLER)
+
+run-eventhandler:
+	@echo "▶️ Запуск eventhandler..."
+	go run $(EVENTHANDLER)
+
+run-httpserver:
+	@echo "▶️ Запуск httpserver..."
+	go run $(HTTPSERVER)
+
+run-website:
+	@echo "▶️ Запуск website..."
+	go run $(WEBSITE)
+
+# Остановка контейнеров
+down:
+	docker compose -f $(DOCKER_COMPOSE) down
+

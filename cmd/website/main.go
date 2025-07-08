@@ -18,11 +18,11 @@ import (
 func main() {
 
 	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		os.Getenv("PGHOST"),
-		os.Getenv("PGPORT"),
-		os.Getenv("PGUSER"),
-		os.Getenv("PGPASSWORD"),
-		os.Getenv("PGDATABASE"),
+		os.Getenv("POSTGRES_HOST"),
+		os.Getenv("POSTGRES_PORT"),
+		os.Getenv("POSTGRES_USER"),
+		os.Getenv("POSTGRES_PASSWORD"),
+		os.Getenv("POSTGRES_DB"),
 	)
 
 	ctx := context.TODO()
@@ -66,8 +66,8 @@ func main() {
 	})
 
 	addr := net.JoinHostPort(
-		os.Getenv("SERVER_HOST"),
-		os.Getenv("SERVER_PORT"))
+		os.Getenv("WSSERVER_HOST"),
+		os.Getenv("WSSERVER_PORT"))
 
 	log.Println("HTTP server started on", addr)
 	if err := http.ListenAndServe(addr, nil); err != nil && errors.Is(err, http.ErrServerClosed) {
